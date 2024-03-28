@@ -28,12 +28,16 @@
 #include <AP_InternalError/AP_InternalError.h>
 #include <AP_Common/ExpandingString.h>
 #include <AP_HAL/SIMState.h>
-
+#include<iostream>   
+#include<chrono>
+//#include <thread>
+//int controller_flag = 1;
+//std::chrono::high_resolution_clock::time_point last_time; 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 #include <SITL/SITL.h>
 #endif
 #include <stdio.h>
-
+//using namespace std;
 #if APM_BUILD_COPTER_OR_HELI || APM_BUILD_TYPE(APM_BUILD_ArduSub)
 #define SCHEDULER_DEFAULT_LOOP_RATE 400
 #else
@@ -50,7 +54,7 @@ const AP_Param::GroupInfo AP_Scheduler::var_info[] = {
     // @Description: Set to non-zero to enable scheduler debug messages. When set to show "Slips" the scheduler will display a message whenever a scheduled task is delayed due to too much CPU load. When set to ShowOverruns the scheduled will display a message whenever a task takes longer than the limit promised in the task table.
     // @Values: 0:Disabled,2:ShowSlips,3:ShowOverruns
     // @User: Advanced
-    AP_GROUPINFO("DEBUG",    0, AP_Scheduler, _debug, 0),
+    AP_GROUPINFO("DEBUG",    0, AP_Scheduler, _debug, 3),
 
     // @Param: LOOP_RATE
     // @DisplayName: Scheduling main loop rate
@@ -92,7 +96,16 @@ AP_Scheduler *AP_Scheduler::get_singleton()
 {
     return _singleton;
 }
+/*void delayMicroseconds(int microseconds) {
+    auto start = std::chrono::high_resolution_clock::now();
+    long long int duration = 0;
 
+    // 计算经过的时间，直到达到指定的微秒数
+    while (duration < microseconds) {
+        auto current = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::microseconds>(current - start).count();
+    }
+}*/
 // initialise the scheduler
 void AP_Scheduler::init(const AP_Scheduler::Task *tasks, uint8_t num_tasks, uint32_t log_performance_bit)
 {
@@ -213,6 +226,7 @@ void AP_Scheduler::run(uint32_t time_available)
         }
 
         if (task.priority > MAX_FAST_TASK_PRIORITIES) {
+        //if (task.priority >= FAST_TASK_PRI0) {
             const uint16_t dt = _tick_counter - _last_run[i];
             // we allow 0 to mean loop rate
             uint32_t interval_ticks = (is_zero(task.rate_hz) ? 1 : _loop_rate_hz / task.rate_hz);
@@ -251,7 +265,61 @@ void AP_Scheduler::run(uint32_t time_available)
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
         fill_nanf_stack();
 #endif
-        task.function();
+        //const char* test_name = "Copter::run_rate_controller*";
+        /*if(strcmp(task.name, test_name) ==0)
+        {
+            //const uint32_t this_time_us = AP_HAL::micros();
+            //printf("now time = %d\n", this_time_us);
+            Task &mutable_task = const_cast<Task &>(_vehicle_tasks[vehicle_tasks_offset-1]);
+            mutable_task.setRate(_fuzz_rate);  // Update rate to 25 Hz
+            printf("Task: Priority=%d, Name=%s, rate= %f\n", task.priority, task.name,task.rate_hz);
+        }*/
+        // 获取当前时间点
+            
+        
+        const char* delay_name = "Copter::run_rate_controller*";
+        if(strcmp(task.name, delay_name) == 0)
+        {
+            uint32_t start_time = AP_HAL::native_micros();
+            //auto start = std::chrono::high_resolution_clock::now();
+            //usleep(3000);
+            //std::chrono::microseconds delay(10000);
+            //std::this_thread::sleep_for(delay);
+            //hal.scheduler->delay_microseconds(1667);
+            //hal.scheduler->delay(2);
+            //delayMicroseconds(5000);
+            task.function();
+            
+            //auto end = std::chrono::high_resolution_clock::now();
+            // 计算任务执行时间
+            //auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+            // 输出任务执行时间
+            printf("Task: Priority=%d, Name=%s, rate= %f,time = %d\n", task.priority, task.name,task.rate_hz,(AP_HAL::native_micros()-start_time));
+            //std::cout << "Task execution time: " << duration.count() << " microseconds" << std::endl;
+        }
+        else 
+        {
+            task.function(); 
+        }
+        //task.function(); 
+        
+
+        /*
+        if(strcmp(task.name, "AP_InertialSensor::update*") ==0)
+        {
+            if(controller_flag == 1)
+            {
+                last_time = end;
+                
+            }      
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - last_time);
+            std::cout << "Task execution time: " << duration.count() << " microseconds" << std::endl;
+            last_time = end;
+            controller_flag = 0;
+        }
+        */
+        
+
         hal.util->persistent_data.scheduler_task = -1;
 
         // record the tick counter when we ran. This drives
@@ -261,6 +329,7 @@ void AP_Scheduler::run(uint32_t time_available)
         // work out how long the event actually took
         now = AP_HAL::micros();
         uint32_t time_taken = now - _task_time_started;
+        //printf("time take is%d\n",time_taken);
         bool overrun = false;
         if (time_taken > _task_time_allowed) {
             overrun = true;
@@ -271,7 +340,12 @@ void AP_Scheduler::run(uint32_t time_available)
                   (unsigned)time_taken,
                   (unsigned)_task_time_allowed);
         }
-
+        /*
+        AP::logger().Write("time_taken_test", "TimeUS, task_name, Time_taken", "INI",
+                                AP_HAL::micros(),
+                                task.name,
+                                time_taken);
+        */
         perf_info.update_task_info(i, time_taken, overrun);
 
         if (time_taken >= time_available) {

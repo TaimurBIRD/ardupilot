@@ -55,10 +55,10 @@
 /*
   useful macro for creating the fastloop task table
  */
-#define FAST_TASK_CLASS(classname, classptr, func) { \
+#define FAST_TASK_CLASS(classname, classptr, func, _rate_hz) { \
     .function = FUNCTOR_BIND(classptr, &classname::func, void),\
     AP_FAST_NAME_INITIALIZER(classname, func)\
-    .rate_hz = 0,\
+    .rate_hz = _rate_hz,\
     .max_time_micros = 0,\
     .priority = AP_Scheduler::FAST_TASK_PRI0 \
 }
@@ -90,9 +90,13 @@ public:
     struct Task {
         task_fn_t function;
         const char *name;
-        float rate_hz;
+        mutable float rate_hz;
         uint16_t max_time_micros;
         uint8_t priority; // task priority
+        void setRate(float new_rate) const {
+        // 在这里添加任何必要的逻辑，例如边界检查等
+        rate_hz = new_rate;
+        }
     };
 
     enum class Options : uint8_t {

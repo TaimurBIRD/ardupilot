@@ -5089,7 +5089,7 @@ void GCS_MAVLINK::send_sys_status()
         control_sensors_present,
         control_sensors_enabled,
         control_sensors_health,
-        static_cast<uint16_t>(AP::scheduler().load_average() * 1000),
+        static_cast<uint64_t>(AP::scheduler().load_average() * 1000),
 #if !defined(HAL_BUILD_AP_PERIPH) || defined(HAL_PERIPH_ENABLE_BATTERY)
         battery.gcs_voltage() * 1000,  // mV
         battery_current,        // in 10mA units

@@ -83,7 +83,7 @@
 const AP_HAL::HAL& hal = AP_HAL::get_HAL();
 
 #define SCHED_TASK(func, _interval_ticks, _max_time_micros, _prio) SCHED_TASK_CLASS(Copter, &copter, func, _interval_ticks, _max_time_micros, _prio)
-#define FAST_TASK(func) FAST_TASK_CLASS(Copter, &copter, func)
+#define FAST_TASK(func, _interval_ticks) FAST_TASK_CLASS(Copter, &copter, func, _interval_ticks)
 
 /*
   scheduler table - all tasks should be listed here.
@@ -111,37 +111,37 @@ SCHED_TASK_CLASS arguments:
  */
 const AP_Scheduler::Task Copter::scheduler_tasks[] = {
     // update INS immediately to get current gyro data populated
-    FAST_TASK_CLASS(AP_InertialSensor, &copter.ins, update),
+    FAST_TASK_CLASS(AP_InertialSensor, &copter.ins, update,     400),       //200
     // run low level rate controllers that only require IMU data
-    FAST_TASK(run_rate_controller),
+    FAST_TASK(run_rate_controller,      400),
 #if AC_CUSTOMCONTROL_MULTI_ENABLED == ENABLED
-    FAST_TASK(run_custom_controller),
+    FAST_TASK(run_custom_controller,        400),
 #endif
     // send outputs to the motors library immediately
-    FAST_TASK(motors_output),
+    FAST_TASK(motors_output,      400),
      // run EKF state estimator (expensive)
-    FAST_TASK(read_AHRS),
+    FAST_TASK(read_AHRS,      400),
 #if FRAME_CONFIG == HELI_FRAME
-    FAST_TASK(update_heli_control_dynamics),
+    FAST_TASK(update_heli_control_dynamics,     400),
     #if MODE_AUTOROTATE_ENABLED == ENABLED
-    FAST_TASK(heli_update_autorotation),
+    FAST_TASK(heli_update_autorotation,     400),
     #endif
 #endif //HELI_FRAME
     // Inertial Nav
-    FAST_TASK(read_inertia),
+    FAST_TASK(read_inertia,      400),
     // check if ekf has reset target heading or position
-    FAST_TASK(check_ekf_reset),
+    FAST_TASK(check_ekf_reset,      400),
     // run the attitude controllers
-    FAST_TASK(update_flight_mode),
+    FAST_TASK(update_flight_mode,      400),
     // update home from EKF if necessary
-    FAST_TASK(update_home_from_EKF),
+    FAST_TASK(update_home_from_EKF,      400),
     // check if we've landed or crashed
-    FAST_TASK(update_land_and_crash_detectors),
+    FAST_TASK(update_land_and_crash_detectors,      400),
 #if HAL_MOUNT_ENABLED
     // camera mount's fast update
-    FAST_TASK_CLASS(AP_Mount, &copter.camera_mount, update_fast),
+    FAST_TASK_CLASS(AP_Mount, &copter.camera_mount, update_fast,      400),
 #endif
-    FAST_TASK(Log_Video_Stabilisation),
+    FAST_TASK(Log_Video_Stabilisation,      400),
 
     SCHED_TASK(rc_loop,              100,    130,  3),
     SCHED_TASK(throttle_loop,         50,     75,  6),
@@ -494,6 +494,7 @@ void Copter::loop_rate_logging()
     if (should_log(MASK_LOG_ATTITUDE_FAST) && !copter.flightmode->logs_attitude()) {
         Log_Write_Attitude();
         Log_Write_PIDS(); // only logs if PIDS bitmask is set
+        //Log_Write_time_taken();
     }
     if (should_log(MASK_LOG_FTN_FAST)) {
         AP::ins().write_notch_log_messages();
