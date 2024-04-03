@@ -1,7 +1,19 @@
 #include "AC_AttitudeControl_Multi.h"
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
+#include<iostream>   
+#include<chrono>
 
+void delayMicroseconds(int microseconds) {
+    auto start = std::chrono::high_resolution_clock::now();
+    long long int duration = 0;
+
+    // 计算经过的时间，直到达到指定的微秒数
+    while (duration < microseconds) {
+        auto current = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::microseconds>(current - start).count();
+    }
+}
 // table of user settable parameters
 const AP_Param::GroupInfo AC_AttitudeControl_Multi::var_info[] = {
     // parameters from parent vehicle
@@ -351,7 +363,7 @@ void AC_AttitudeControl_Multi::rate_controller_run()
 
     _motors.set_roll(get_rate_roll_pid().update_all(_ang_vel_body.x, gyro_latest.x, _motors.limit.roll) + _actuator_sysid.x);
     _motors.set_roll_ff(get_rate_roll_pid().get_ff());
-
+    delayMicroseconds(4000);
     _motors.set_pitch(get_rate_pitch_pid().update_all(_ang_vel_body.y, gyro_latest.y, _motors.limit.pitch) + _actuator_sysid.y);
     _motors.set_pitch_ff(get_rate_pitch_pid().get_ff());
 
