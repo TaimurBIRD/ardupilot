@@ -3,7 +3,7 @@
 #include <AP_Math/AP_Math.h>
 #include<iostream>   
 #include<chrono>
-
+/*
 void delayMicroseconds(int microseconds) {
     auto start = std::chrono::high_resolution_clock::now();
     long long int duration = 0;
@@ -13,7 +13,9 @@ void delayMicroseconds(int microseconds) {
         auto current = std::chrono::high_resolution_clock::now();
         duration = std::chrono::duration_cast<std::chrono::microseconds>(current - start).count();
     }
-}
+    usleep(microseconds);
+}*/
+
 // table of user settable parameters
 const AP_Param::GroupInfo AC_AttitudeControl_Multi::var_info[] = {
     // parameters from parent vehicle
@@ -352,28 +354,87 @@ void AC_AttitudeControl_Multi::update_throttle_rpy_mix()
     _throttle_rpy_mix = constrain_float(_throttle_rpy_mix, 0.1f, AC_ATTITUDE_CONTROL_MAX);
 }
 
+uint32_t lastCallTime_rate = 0;
+uint32_t functionCallCount_rate = 0;
+// uint16_t counter = 0;
 void AC_AttitudeControl_Multi::rate_controller_run()
 {
+    /*uint32_t currentTime = AP_HAL::micros();
+
+    if (lastCallTime != 0) {
+        uint32_t timeDiff = currentTime - lastCallTime;
+        float frequency = 1000000 / timeDiff;
+        printf("Rate controller run Frequency:%f,timeDiff:%d\n",frequency,timeDiff);
+    }
+
+    lastCallTime = currentTime;*/
     // move throttle vs attitude mixing towards desired (called from here because this is conveniently called on every iteration)
-    update_throttle_rpy_mix();
+    //if(counter % 8 != 1 and counter % 8 != 4 and counter % 8 != 7)
+    //if(counter % 20 == 1 or counter % 20 == 4 or counter % 20 == 7 or counter % 20 == 10 or counter % 20 == 13 or counter % 20 == 16 or counter %20 == 19)
+    /*if(counter % 8 == 1 or counter % 8 == 4 or counter % 8 == 7)
+    {
+        functionCallCount++;
+        update_throttle_rpy_mix();
 
-    _ang_vel_body += _sysid_ang_vel_body;
+        _ang_vel_body += _sysid_ang_vel_body;
 
-    Vector3f gyro_latest = _ahrs.get_gyro_latest();
+        Vector3f gyro_latest = _ahrs.get_gyro_latest();
 
-    _motors.set_roll(get_rate_roll_pid().update_all(_ang_vel_body.x, gyro_latest.x, _motors.limit.roll) + _actuator_sysid.x);
-    _motors.set_roll_ff(get_rate_roll_pid().get_ff());
-    delayMicroseconds(4000);
-    _motors.set_pitch(get_rate_pitch_pid().update_all(_ang_vel_body.y, gyro_latest.y, _motors.limit.pitch) + _actuator_sysid.y);
-    _motors.set_pitch_ff(get_rate_pitch_pid().get_ff());
+        _motors.set_roll(get_rate_roll_pid().update_all(_ang_vel_body.x, gyro_latest.x, _motors.limit.roll) + _actuator_sysid.x);
+        _motors.set_roll_ff(get_rate_roll_pid().get_ff());
+        //delayMicroseconds(1000);
+        _motors.set_pitch(get_rate_pitch_pid().update_all(_ang_vel_body.y, gyro_latest.y, _motors.limit.pitch) + _actuator_sysid.y);
+        _motors.set_pitch_ff(get_rate_pitch_pid().get_ff());
 
-    _motors.set_yaw(get_rate_yaw_pid().update_all(_ang_vel_body.z, gyro_latest.z, _motors.limit.yaw) + _actuator_sysid.z);
-    _motors.set_yaw_ff(get_rate_yaw_pid().get_ff()*_feedforward_scalar);
+        _motors.set_yaw(get_rate_yaw_pid().update_all(_ang_vel_body.z, gyro_latest.z, _motors.limit.yaw) + _actuator_sysid.z);
+        _motors.set_yaw_ff(get_rate_yaw_pid().get_ff()*_feedforward_scalar);
 
-    _sysid_ang_vel_body.zero();
-    _actuator_sysid.zero();
+        _sysid_ang_vel_body.zero();
+        _actuator_sysid.zero();
 
-    control_monitor_update();
+        control_monitor_update();
+        //printf("counter:%d\n",counter);
+        //counter++;
+    }
+    else
+    {
+        //counter++;
+    }
+    if(counter == 8)
+    {
+        counter = 0;
+        counter++;
+    }
+    else{
+        counter++;    
+    }*/ 
+        functionCallCount_rate++;
+        update_throttle_rpy_mix();
+
+        _ang_vel_body += _sysid_ang_vel_body;
+
+        Vector3f gyro_latest = _ahrs.get_gyro_latest();
+
+        _motors.set_roll(get_rate_roll_pid().update_all(_ang_vel_body.x, gyro_latest.x, _motors.limit.roll) + _actuator_sysid.x);
+        _motors.set_roll_ff(get_rate_roll_pid().get_ff());
+        //delayMicroseconds(1000);
+        _motors.set_pitch(get_rate_pitch_pid().update_all(_ang_vel_body.y, gyro_latest.y, _motors.limit.pitch) + _actuator_sysid.y);
+        _motors.set_pitch_ff(get_rate_pitch_pid().get_ff());
+
+        _motors.set_yaw(get_rate_yaw_pid().update_all(_ang_vel_body.z, gyro_latest.z, _motors.limit.yaw) + _actuator_sysid.z);
+        _motors.set_yaw_ff(get_rate_yaw_pid().get_ff()*_feedforward_scalar);
+
+        _sysid_ang_vel_body.zero();
+        _actuator_sysid.zero();
+
+        control_monitor_update();
+    if (AP_HAL::native_micros() - lastCallTime_rate >= 1000000) 
+    {
+        float frequency = (float)functionCallCount_rate / ((float)(AP_HAL::native_micros() - lastCallTime_rate) / 1000000.0);
+        printf("rate controller frequency:%f\n", frequency);
+        functionCallCount_rate = 0;
+        lastCallTime_rate = AP_HAL::native_micros();
+    }
 }
 
 // sanity check parameters.  should be called once before takeoff

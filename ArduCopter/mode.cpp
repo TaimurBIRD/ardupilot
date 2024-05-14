@@ -360,11 +360,55 @@ bool Copter::set_mode(const uint8_t new_mode, const ModeReason reason)
 
 // update_flight_mode - calls the appropriate attitude controllers based on flight mode
 // called at 100hz or more
+uint32_t lastCallTime_mode = 0;
+uint32_t functionCallCount_mode = 0;
+// uint16_t counter = 0;
 void Copter::update_flight_mode()
 {
+    /*
+    // if(counter % 8 == 1 or counter % 8 == 4 or counter % 8 == 7)    //150hz
+    // if(counter % 2 == 1)    // 200hz
+    if(counter % 8 != 1)    //350hz
+    {
+        functionCallCount_mode++;
+        surface_tracking.invalidate_for_logging();  // invalidate surface tracking alt, flight mode will set to true if used
+
+        flightmode->run();
+    }
+    else
+    {
+        //counter++;
+    }
+    if(counter == 8)
+    {
+        counter = 0;
+        counter++;
+    }
+    else
+    {
+        counter++;    
+    }
+    // 每隔一段时间打印一次函数频率
+    if (AP_HAL::native_micros() - lastCallTime_mode >= 1000000) { // 每隔1秒
+        float frequency = (float)functionCallCount_mode / ((float)(AP_HAL::native_micros() - lastCallTime_mode) / 1000000.0);
+        printf("flight mode frequency:%f\n", frequency);
+        // 重置计数器和时间
+        functionCallCount_mode = 0;
+        lastCallTime_mode = AP_HAL::native_micros();
+    }
+    */
+    functionCallCount_mode++;
     surface_tracking.invalidate_for_logging();  // invalidate surface tracking alt, flight mode will set to true if used
 
     flightmode->run();
+    // 每隔一段时间打印一次函数频率
+    if (AP_HAL::native_micros() - lastCallTime_mode >= 1000000) { // 每隔1秒
+        float frequency = (float)functionCallCount_mode / ((float)(AP_HAL::native_micros() - lastCallTime_mode) / 1000000.0);
+        printf("flight mode frequency:%f\n", frequency);
+        // 重置计数器和时间
+        functionCallCount_mode = 0;
+        lastCallTime_mode = AP_HAL::native_micros();
+    }
 }
 
 // exit_mode - high level call to organise cleanup as a flight mode is exited

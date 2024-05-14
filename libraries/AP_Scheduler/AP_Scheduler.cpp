@@ -28,7 +28,10 @@
 #include <AP_InternalError/AP_InternalError.h>
 #include <AP_Common/ExpandingString.h>
 #include <AP_HAL/SIMState.h>
-
+//#include<iostream>   
+//#include<chrono>
+//#include <thread>
+//using namespace std;
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 #include <SITL/SITL.h>
 #endif
@@ -41,7 +44,16 @@
 #endif
 
 #define debug(level, fmt, args...)   do { if ((level) <= _debug.get()) { hal.console->printf(fmt, ##args); }} while (0)
-
+#define FREQUENCY_COUNT 40
+#define TAKSK_COUNT 6
+const char *fuzz_task[TAKSK_COUNT] = {
+    "Copter::update_flight_mode*",
+    "Copter::run_rate_controller*",
+    "Copter::motor_output*",
+    "Copter::read_AHRS",
+    "Copter::read_inertia",
+    "Copter::update_flight_mode"
+};
 extern const AP_HAL::HAL& hal;
 
 const AP_Param::GroupInfo AP_Scheduler::var_info[] = {
@@ -67,9 +79,70 @@ const AP_Param::GroupInfo AP_Scheduler::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("OPTIONS",  2, AP_Scheduler, _options, 0),
 
+    // @Param: IMU_RATE
+    // @DisplayName: IMU rate fuzz parameter
+    // @Description: This controls IMU rate for fuzz， step is 10hz.
+    // @Values: 50:50Hz,100:100Hz,200:200Hz,250:250Hz,300:300Hz,400:400Hz
+    // @Units: Hz
+    // @Range: 0 400
+    // @Increment: 10 
+    AP_GROUPINFO("IMU_RATE",  3, AP_Scheduler, _imu_rate, 400),
+
+    // @Param: rate_RATE
+    // @DisplayName: IMU rate fuzz parameter
+    // @Description: This controls IMU rate for fuzz.
+    // @Values: 50:50Hz,100:100Hz,200:200Hz,250:250Hz,300:300Hz,400:400Hz
+    // @RebootRequired: True
+    // @User: Advanced 
+    AP_GROUPINFO("rate_RATE",  4, AP_Scheduler, _rate_rate, 400),
+
+    // @Param: MOTOR_RATE
+    // @DisplayName: IMU rate fuzz parameter
+    // @Description: This controls IMU rate for fuzz.
+    // @Values: 50:50Hz,100:100Hz,200:200Hz,250:250Hz,300:300Hz,400:400Hz
+    // @RebootRequired: True
+    // @User: Advanced 
+    AP_GROUPINFO("MOTO_RATE",  5, AP_Scheduler, _moto_rate, 400),
+
+    // @Param: AHRS_RATE
+    // @DisplayName: IMU rate fuzz parameter
+    // @Description: This controls IMU rate for fuzz.
+    // @Values: 50:50Hz,100:100Hz,200:200Hz,250:250Hz,300:300Hz,400:400Hz
+    // @RebootRequired: True
+    // @User: Advanced 
+    AP_GROUPINFO("AHRS_RATE",  6, AP_Scheduler, _ahrs_rate, 400),
+
+    // @Param: INERTIA_RATE
+    // @DisplayName: IMU rate fuzz parameter
+    // @Description: This controls IMU rate for fuzz.
+    // @Values: 50:50Hz,100:100Hz,200:200Hz,250:250Hz,300:300Hz,400:400Hz
+    // @RebootRequired: True
+    // @User: Advanced 
+    AP_GROUPINFO("INER_RATE",  7, AP_Scheduler, _iner_rate, 400),
+
+    // @Param: MODE_RATE
+    // @DisplayName: IMU rate fuzz parameter
+    // @Description: This controls IMU rate for fuzz.
+    // @Values: 50:50Hz,100:100Hz,200:200Hz,250:250Hz,300:300Hz,400:400Hz
+    // @RebootRequired: True
+    // @User: Advanced 
+    AP_GROUPINFO("MODE_RATE",  8, AP_Scheduler, _mode_rate, 400),
+
     AP_GROUPEND
 };
+void delayMicroseconds(int microseconds) {
+    /*auto start = std::chrono::high_resolution_clock::now();
+    long long int duration = 0;
 
+    // 计算经过的时间，直到达到指定的微秒数
+    while (duration < microseconds) {
+        auto current = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::microseconds>(current - start).count();
+    }*/
+    usleep(microseconds);
+    //std::chrono::microseconds delay(microseconds);
+    //std::this_thread::sleep_for(delay);
+}
 // constructor
 AP_Scheduler::AP_Scheduler()
 {
@@ -172,6 +245,12 @@ static void fill_nanf_stack(void)
   run one tick
   this will run as many scheduler tasks as we can in the specified time
  */
+uint32_t lastCallTime = 0;
+uint32_t functionCallCount = 0;
+uint16_t counter = 1;
+uint16_t fre_counter = 1;
+uint16_t task_fuzz_frequency = 35;
+uint8_t offset = 0;
 void AP_Scheduler::run(uint32_t time_available)
 {
     uint32_t run_started_usec = AP_HAL::micros();
@@ -251,7 +330,88 @@ void AP_Scheduler::run(uint32_t time_available)
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
         fill_nanf_stack();
 #endif
-        task.function();
+        // uint32_t start_time = AP_HAL::native_micros();
+        //const char* delay_name = "Copter::update_flight_mode*";
+        
+        if(strcmp(task.name, fuzz_task[offset]) == 0)
+        {
+            printf("fuzz task name is %s\n",fuzz_task[offset]);
+            //uint32_t start_time = AP_HAL::native_micros();
+            //auto start = std::chrono::high_resolution_clock::now();
+            //usleep(3000);
+            //std::chrono::microseconds delay(10000);
+            //std::this_thread::sleep_for(delay);
+            //hal.scheduler->delay_microseconds(2000);
+            //hal.scheduler->delay(2);
+            //delayMicroseconds(2000);
+            //if(counter % 8 == 1 or counter % 8 == 4 or counter % 8 == 7)    //150hz
+            //if(counter % 2 == 1)    //200hz
+            //if(counter % 4 == 1)    //300hz
+            //if(counter % 8 != 1)    //350hz
+            //if(counter % 5 != 1)    //320hz
+            //if(counter %40 == 1)      //10hz
+            /*if(counter % 16 != 1)
+            {
+                functionCallCount++;
+            //printf("counter:%d\n",counter);
+            task.function();
+            }
+            else000
+            {
+                //counter++;
+            }
+            if(counter == 16)
+            {
+                counter = 0;
+            counter++;
+            }
+            else
+            {
+                counter++;    
+            }*/
+            if(fre_counter < FREQUENCY_COUNT)
+            {
+                if(counter <= task_fuzz_frequency and fre_counter <= task_fuzz_frequency)
+                {
+                    functionCallCount++;
+                    task.function();
+                    counter++;
+                }
+                else
+                {
+                    counter = 1;
+                }
+                fre_counter++;
+            }
+            else
+            {
+                fre_counter = 1;
+            }
+
+            //printf("fre counter:%d,counter:%d\n",fre_counter,counter);
+            // 每隔一段时间打印一次函数频率
+            if (AP_HAL::native_micros() - lastCallTime >= 1000000) { // 每隔1秒
+                float frequency = (float)functionCallCount / ((float)(AP_HAL::native_micros() - lastCallTime) / 1000000.0);
+                printf("fuzz task frequency:%f\n", frequency);
+                // 重置计数器和时间
+                functionCallCount = 0;
+                lastCallTime = AP_HAL::native_micros();
+            }
+            //task.function();
+            
+            //auto end = std::chrono::high_resolution_clock::now();
+            // 计算任务执行时间
+            //auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+            // 输出任务执行时间
+            //printf("Task: Priority=%d, Name=%s, rate= %f,time = %d\n", task.priority, task.name,task.rate_hz,(AP_HAL::native_micros()-start_time));
+            //std::cout << "Task execution time: " << duration.count() << " microseconds" << std::endl;
+        }
+        else 
+        {
+            task.function(); 
+        }
+        //task.function();
+        //printf("Task: Priority=%d, Name=%s, rate= %f,time = %d\n", task.priority, task.name,task.rate_hz,(AP_HAL::native_micros()-start_time));
         hal.util->persistent_data.scheduler_task = -1;
 
         // record the tick counter when we ran. This drives
@@ -341,7 +501,10 @@ void AP_Scheduler::loop()
         */
         auto *sitl = AP::sitl();
         uint32_t loop_delay_us = sitl->loop_delay.get();
+        // loop_delay_us = 0;
+        //uint32_t delay_start_time = AP_HAL::native_micros();
         hal.scheduler->delay_microseconds(loop_delay_us);
+        //printf("delay time:%d\n",(AP_HAL::native_micros()-delay_start_time));
     }
 #endif
 

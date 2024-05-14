@@ -683,6 +683,7 @@ void SITL_State::_fdm_input_local(void)
     // update simulation time
     if (_sitl) {
         hal.scheduler->stop_clock(_sitl->state.timestamp_us);
+        // printf("stop_clock\n");
     } else {
         hal.scheduler->stop_clock(AP_HAL::micros64()+100);
     }

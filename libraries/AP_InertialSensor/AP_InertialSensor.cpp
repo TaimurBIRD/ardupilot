@@ -35,7 +35,7 @@
 #include "AP_InertialSensor_ExternalAHRS.h"
 #include "AP_InertialSensor_Invensensev3.h"
 #include "AP_InertialSensor_NONE.h"
-
+#include <stdio.h>
 /* Define INS_TIMING_DEBUG to track down scheduling issues with the main loop.
  * Output is on the debug console. */
 #ifdef INS_TIMING_DEBUG
@@ -1637,10 +1637,13 @@ void AP_InertialSensor::HarmonicNotch::update_params(uint8_t instance, bool conv
 /*
   update gyro and accel values from backends
  */
+uint32_t lastCallTime_imu = 0;
+uint32_t functionCallCount_imu = 0;
 void AP_InertialSensor::update(void)
 {
     // during initialisation update() may be called without
     // wait_for_sample(), and a wait is implied
+    functionCallCount_imu++;
     wait_for_sample();
 
         for (uint8_t i=0; i<INS_MAX_INSTANCES; i++) {
@@ -1720,6 +1723,13 @@ void AP_InertialSensor::update(void)
     
     _have_sample = false;
 
+    if (AP_HAL::native_micros() - lastCallTime_imu >= 1000000) 
+    {
+        float frequency = (float)functionCallCount_imu / ((float)(AP_HAL::native_micros() - lastCallTime_imu) / 1000000.0);
+        printf("imu frequency:%f\n", frequency);
+        functionCallCount_imu = 0;
+        lastCallTime_imu = AP_HAL::native_micros();
+    }
 #if HAL_INS_TEMPERATURE_CAL_ENABLE
     if (tcal_learning && !temperature_cal_running()) {
         AP_Notify::flags.temp_cal_running = false;

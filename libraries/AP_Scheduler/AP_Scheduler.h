@@ -198,7 +198,25 @@ private:
 
     // scheduler options
     AP_Int8 _options;
-    
+
+    // IMU rate
+    AP_Int16 _imu_rate;
+
+    // RATE rate
+    AP_Int16 _rate_rate;
+
+    // MOTOR rate
+    AP_Int16 _moto_rate;
+
+    // AHRS rate
+    AP_Int16 _ahrs_rate;
+
+    // INERTIA rate
+    AP_Int16 _iner_rate;
+
+    // MODE rate
+    AP_Int16 _mode_rate;
+
     // calculated loop period in usec
     uint16_t _loop_period_us;
 
