@@ -2,6 +2,7 @@
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
 #include <AP_Logger/AP_Logger.h>
+#include <stdio.h>
 
 /*
   code to monitor and report on the rate controllers, allowing for
@@ -15,9 +16,14 @@
 void AC_AttitudeControl::control_monitor_filter_pid(float value, float &rms)
 {
     const float filter_constant = 0.99f;
+    // printf("value: %f\n", value);
     // we don't do the sqrt() here as it is quite expensive. That is
     // done when reporting a result
     rms = filter_constant * rms + (1.0f - filter_constant) * sq(value);
+}
+void AC_AttitudeControl::control_monitor_pid(float value, float &rms)
+{
+    rms = value;
 }
 
 /*
@@ -35,6 +41,10 @@ void AC_AttitudeControl::control_monitor_update(void)
 
     const AP_PIDInfo &iyaw   = get_rate_yaw_pid().get_pid_info();
     control_monitor_filter_pid(iyaw.P + iyaw.D + iyaw.FF,  _control_monitor.rms_yaw);
+    // control_monitor_filter_pid(iyaw.I,             _control_monitor.rms_yaw_I);
+    control_monitor_pid(iyaw.I,             _control_monitor.rms_yaw_I);
+    // printf("iyaw.I: %f\n", iyaw.I);
+    // printf("YAW_I_monitor: %f\n", _control_monitor.rms_yaw_I);
 }
 
 /*
@@ -50,13 +60,16 @@ void AC_AttitudeControl::control_monitor_log(void) const
 // @Field: RMSPitchP: LPF Root-Mean-Squared Pitch Rate controller P gain
 // @Field: RMSPitchD: LPF Root-Mean-Squared Pitch Rate controller D gain
 // @Field: RMSYaw: LPF Root-Mean-Squared Yaw Rate controller P+D gain
-    AP::logger().WriteStreaming("CTRL", "TimeUS,RMSRollP,RMSRollD,RMSPitchP,RMSPitchD,RMSYaw", "Qfffff",
+// @Field: RMSYawI: LPF Root-Mean-Squared Yaw Rate controller I gain
+    AP::logger().WriteStreaming("CTRL", "TimeUS,RMSRollP,RMSRollD,RMSPitchP,RMSPitchD,RMSYaw,RMSYawI", "Qffffff",
                                            AP_HAL::micros64(),
                                            (double)safe_sqrt(_control_monitor.rms_roll_P),
                                            (double)safe_sqrt(_control_monitor.rms_roll_D),
                                            (double)safe_sqrt(_control_monitor.rms_pitch_P),
                                            (double)safe_sqrt(_control_monitor.rms_pitch_D),
-                                           (double)safe_sqrt(_control_monitor.rms_yaw));
+                                           (double)safe_sqrt(_control_monitor.rms_yaw),
+                                          //  (double)safe_sqrt(_control_monitor.rms_yaw_I)
+                                          (double)_control_monitor.rms_yaw_I);                                        
 
 }
 
@@ -114,4 +127,8 @@ float AC_AttitudeControl::control_monitor_rms_output_pitch_D(void) const
 float AC_AttitudeControl::control_monitor_rms_output_yaw(void) const
 {
     return safe_sqrt(_control_monitor.rms_yaw);
+}
+float AC_AttitudeControl::control_monitor_rms_output_yaw_I(void) const
+{
+    return safe_sqrt(_control_monitor.rms_yaw_I);
 }

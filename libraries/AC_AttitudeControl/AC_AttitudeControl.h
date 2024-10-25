@@ -538,10 +538,12 @@ protected:
         float rms_pitch_P;
         float rms_pitch_D;
         float rms_yaw;
+        float rms_yaw_I;
     } _control_monitor;
 
     // update state in ControlMonitor
     void control_monitor_filter_pid(float value, float &rms_P);
+    void control_monitor_pid(float value, float &rms);
     void control_monitor_update(void);
 
     // true in inverted flight mode
@@ -559,4 +561,5 @@ public:
     float control_monitor_rms_output_pitch_D(void) const;
     float control_monitor_rms_output_pitch(void) const;
     float control_monitor_rms_output_yaw(void) const;
+    float control_monitor_rms_output_yaw_I(void) const;
 };

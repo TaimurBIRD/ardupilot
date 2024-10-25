@@ -27,6 +27,7 @@ void Copter::update_land_and_crash_detectors()
 
     crash_check();
     thrust_loss_check();
+    // AP::logger().Write_Error(LogErrorSubsystem::THRUST_LOSS_CHECK, LogErrorCode::FAILSAFE_OCCURRED);
     yaw_imbalance_check();
 }
 

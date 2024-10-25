@@ -71,6 +71,7 @@ void Copter::crash_check()
 
     // check for angle error over 30 degrees
     const float angle_error = attitude_control->get_att_error_angle_deg();
+    // printf("angle_error: %f\n", angle_error);
     if (angle_error <= CRASH_CHECK_ANGLE_DEVIATION_DEG) {
         crash_counter = 0;
         return;
@@ -212,18 +213,23 @@ void Copter::yaw_imbalance_check()
     // magnitude of low pass filtered I term
     const float I_term = attitude_control->get_rate_yaw_pid().get_pid_info().I;
     const float I = fabsf(yaw_I_filt.apply(attitude_control->get_rate_yaw_pid().get_pid_info().I,G_Dt));
+    // printf("YAW_I_term: %f\n", I_term);
+    // printf("YAW_I: %f\n", I);
     if (I > fabsf(I_term)) {
         // never allow to be larger than I
         yaw_I_filt.reset(I_term);
     }
+    // printf("YAW_I_filt: %f\n", yaw_I_filt.get());
 
     const float I_max = attitude_control->get_rate_yaw_pid().imax();
+    // printf("YAW_I_max: %f\n", I_max);
     if ((is_positive(I_max) && ((I > YAW_IMBALANCE_IMAX_THRESHOLD * I_max) || (is_equal(I_term,I_max))))) {
         // filtered using over percentage of I max or unfiltered = I max
         // I makes up more than percentage of total available control power
         const uint32_t now = millis();
         if (now - last_yaw_warn_ms > YAW_IMBALANCE_WARN_MS) {
             last_yaw_warn_ms = now;
+            AP::logger().Write_Error(LogErrorSubsystem::YAW_IMBALANCE, LogErrorCode::FAILSAFE_OCCURRED);
             gcs().send_text(MAV_SEVERITY_EMERGENCY, "Yaw Imbalance %0.0f%%", I *100);
         }
     }
